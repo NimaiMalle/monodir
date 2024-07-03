@@ -18,31 +18,45 @@ This repository serves as a proof of concept for a "mono-directory" structure in
   - `app1/`, `app2/`, etc.: Application packages within each project.
   - `common/`: Project-specific shared library packages.
 
-## Key Features
+## Setup
+Install dependencies for the global shared library packages, and the separate project workspaces.
+```bash
+cd common/global-lib1 && yarn install && cd -
+cd common/global-lib2 && yarn install && cd -
+cd project1 && yarn install && cd -
+cd project2 && yarn install && cd -
+```
 
-- Use of yarn workspaces for managing multiple packages.
-- Implementation of "Hello World" style applications and trivial shared libraries.
-- Exploration of dependency version resolution, particularly with lodash and moment.
-- Investigation of pinned versions vs. range specifications in different parts of the monorepo.
+## Runing
+Run the applications to see what versions of the packages are used.
+```bash
+node project1/app1/index.js
+node project1/app2/index.js
+node project2/app1/index.js
+```
+
+## Explore
+Take a look at the various `package.json` files in the repository.  Note how the `app` dependencies are static or pinned, and the 
+
+## List Duplicate Dependencies
+The root level `list_dups.js` lists any dependencies in any yarn workspace, where there are multiple static versions of the same package declared.  For example, try changing `project2/app2/package.json` to depend on lodash version 4.17.20.  Run:
+```bash
+node list_dups.js project2
+```
+This script exists to check if, within a single workspace, there are multiple packages using different pinned or static versions of the same package.  This is a no-no.
+
 
 ## Learnings
 
-- Challenges in maintaining consistent versions across a monorepo structure.
-- Limitations of yarn in dynamically adapting shared library dependencies to application-specific versions.
-- Importance of careful version management in monorepo setups.
-
-## Future Work
-
-- Explore advanced dependency management tools and strategies for monorepos.
-- Implement and test solutions for ensuring version consistency across the project.
-- Investigate build and deployment strategies for monorepo applications.
-
-## Contributing
-
-This project is a personal exploration and learning exercise. However, observations, suggestions, and discussions are welcome through GitHub issues.
+- In each workspace directory:
+    - Use ranged versions as desired in any workspace-shared packages.
+    - Use static pinned versions in any workspace applications.  ("Applications" are never used in dependencies of other packages.)
+- Packages in the top-level `common` directory are meant to be available to all project workspaces
+    - These "global" packages will always use the exact versions of dependencies as resolved when yarn install was run
+    - Even when a ranged version is specified, the resolution of that ranged version is fixed when `yarn install` is run in the package' directory
 
 ## License
 
-This project is released into the public domain. You are free to use, modify, distribute, and perform the work, even for commercial purposes, without asking permission.
+`:P` This project is released into the public domain. You are free to use, modify, distribute, and perform the work, even for commercial purposes, without asking permission.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

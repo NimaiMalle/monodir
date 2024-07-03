@@ -2,10 +2,17 @@ const fs = require("fs");
 const path = require("path");
 
 function getWorkspaces(rootDir) {
-  const rootPackageJson = JSON.parse(
-    fs.readFileSync(path.join(rootDir, "package.json"), "utf8")
-  );
-  return rootPackageJson.workspaces || [];
+  const packageJsonPath = path.join(rootDir, "package.json");
+  if (!fs.existsSync(packageJsonPath)) {
+    throw new Error(`No package.json found in ${rootDir}`);
+  }
+  const rootPackageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+  if (!rootPackageJson.workspaces) {
+    throw new Error(
+      `The package.json in ${rootDir} does not define any workspaces`
+    );
+  }
+  return rootPackageJson.workspaces;
 }
 
 function findPackageJsonFiles(rootDir, workspaces) {
@@ -30,13 +37,14 @@ function findPackageJsonFiles(rootDir, workspaces) {
 }
 
 function isPinnedVersion(version) {
+  // Ignore file dependencies
+  if (version.startsWith("file:")) {
+    return false;
+  }
   return (
-    !version.startsWith("^") &&
-    !version.startsWith("~") &&
-    !version === "*"
+    !version.startsWith("^") && !version.startsWith("~") && version !== "*"
   );
 }
-
 function checkDependencies(packageJsonFiles) {
   const dependencies = {};
   packageJsonFiles.forEach((file) => {
@@ -72,13 +80,20 @@ function checkDependencies(packageJsonFiles) {
     console.log(
       "No version inconsistencies found in pinned dependencies across workspace packages."
     );
-    process.exit(0); // Exit with code 0 if no inconsistencies found
+    process.exit(0);
   } else {
-    process.exit(1); // Exit with code 1 if inconsistencies found
+    process.exit(1);
   }
 }
 
-const rootDir = process.cwd();
-const workspaces = getWorkspaces(rootDir);
-const packageJsonFiles = findPackageJsonFiles(rootDir, workspaces);
-checkDependencies(packageJsonFiles);
+// Get the directory from command line argument, or use current directory if not provided
+const rootDir = path.resolve(process.argv[2] || process.cwd());
+
+try {
+  const workspaces = getWorkspaces(rootDir);
+  const packageJsonFiles = findPackageJsonFiles(rootDir, workspaces);
+  checkDependencies(packageJsonFiles);
+} catch (error) {
+  console.error(`Error: ${error.message}`);
+  process.exit(1);
+}
