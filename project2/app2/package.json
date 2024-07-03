@@ -1,0 +1,10 @@
+{
+  "name": "@project2/app2",
+  "version": "1.0.0",
+  "dependencies": {
+    "@project2/project2-lib": "1.0.0",
+    "@monodir/global-lib2": "file:../../common/global-lib2",
+    "lodash": "4.17.19",
+    "moment": "2.29.2"
+  }
+}
