@@ -21,10 +21,10 @@ This repository serves as a proof of concept for a "mono-directory" structure in
 ## Setup
 Install dependencies for the global shared library packages, and the separate project workspaces.
 ```bash
-cd common/global-lib1 && yarn install && cd -
-cd common/global-lib2 && yarn install && cd -
-cd project1 && yarn install && cd -
-cd project2 && yarn install && cd -
+yarn install --cwd common/global-lib1
+yarn install --cwd common/global-lib2
+yarn install --cwd project1
+yarn install --cwd project2
 ```
 
 ## Runing
@@ -45,15 +45,6 @@ node list_dups.js project2
 ```
 This script exists to check if, within a single workspace, there are multiple packages using different pinned or static versions of the same package.  This is a no-no.
 
-
-## Learnings
-
-- In each workspace directory:
-    - Use ranged versions as desired in any workspace-shared packages.
-    - Use static pinned versions in any workspace applications.  ("Applications" are never used in dependencies of other packages.)
-- Packages in the top-level `common` directory are meant to be available to all project workspaces
-    - These "global" packages will always use the exact versions of dependencies as resolved when yarn install was run
-    - Even when a ranged version is specified, the resolution of that ranged version is fixed when `yarn install` is run in the package' directory
 
 ## License
 

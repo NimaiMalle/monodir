@@ -1,2 +1,7 @@
+const _ = require("lodash");
 const moment = require("moment");
-module.exports = { sayHello: () => `Hello from global-lib2 moment version ${moment.version}` };
+//console.log(`TEST: moment = ${moment}`);
+module.exports = {
+  sayHello: () =>
+    `Hi from global-lib2.\n\tLodash version: ${_?.VERSION}\n\tMoment version: ${moment?.version}`,
+};

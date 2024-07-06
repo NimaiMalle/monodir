@@ -1,99 +1,65 @@
+const { execSync } = require("child_process");
 const fs = require("fs");
-const path = require("path");
 
-function getWorkspaces(rootDir) {
-  const packageJsonPath = path.join(rootDir, "package.json");
-  if (!fs.existsSync(packageJsonPath)) {
-    throw new Error(`No package.json found in ${rootDir}`);
+// If an argument is provided, use it as the root directory
+if (process.argv.length > 2) {
+  // Check if the provided directory exists
+  if (!fs.existsSync(process.argv[2])) {
+    console.error(`Error: Directory not found: ${process.argv[2]}`);
+    process.exit(1);
   }
-  const rootPackageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
-  if (!rootPackageJson.workspaces) {
-    throw new Error(
-      `The package.json in ${rootDir} does not define any workspaces`
-    );
-  }
-  return rootPackageJson.workspaces;
+  process.chdir(process.argv[2]);
 }
 
-function findPackageJsonFiles(rootDir, workspaces) {
-  let results = [];
-  workspaces.forEach((workspace) => {
-    if (workspace.endsWith("/*")) {
-      const dir = path.join(rootDir, workspace.slice(0, -2));
-      fs.readdirSync(dir).forEach((subdir) => {
-        const packageJsonPath = path.join(dir, subdir, "package.json");
-        if (fs.existsSync(packageJsonPath)) {
-          results.push(packageJsonPath);
-        }
-      });
+function checkDependencies() {
+  try {
+    // Run yarn list and get the output
+    const yarnListOutput = execSync("yarn list", { encoding: "utf8" });
+
+    // Process the output
+    const dependencies = yarnListOutput
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.match(/[│├└][\s─]*.+@.+/))
+      .map((line) => {
+        const match = line.match(/[│├└][\s─]*(.+)@(.+)/);
+        return match ? `${match[1]}@${match[2]}` : null;
+      })
+      .filter((dep) => dep && !dep.startsWith("@") && !dep.includes(":"))
+      .sort();
+
+    // Find duplicates
+    const duplicates = dependencies.reduce((acc, dep) => {
+      const [name, version] = dep.split("@");
+      if (!acc[name]) {
+        acc[name] = new Set();
+      }
+      acc[name].add(version);
+      return acc;
+    }, {});
+
+    const conflicts = Object.entries(duplicates)
+      .filter(([, versions]) => versions.size > 1)
+      .map(
+        ([name, versions]) =>
+          `${name.replace(/^[│├└─ ]+/, "")}:\n${Array.from(versions)
+            .map((v) => `  ${v}`)
+            .join("\n")}`
+      );
+
+    // Output results
+    if (conflicts.length > 0) {
+      console.error("Multiple versions of the same dependency found:");
+      console.error(conflicts.join("\n\n"));
+      process.exit(1);
     } else {
-      const packageJsonPath = path.join(rootDir, workspace, "package.json");
-      if (fs.existsSync(packageJsonPath)) {
-        results.push(packageJsonPath);
-      }
+      console.log("Dependency check passed. No conflicts found.");
+      process.exit(0);
     }
-  });
-  return results;
-}
-
-function isPinnedVersion(version) {
-  // Ignore file dependencies
-  if (version.startsWith("file:")) {
-    return false;
-  }
-  return (
-    !version.startsWith("^") && !version.startsWith("~") && version !== "*"
-  );
-}
-function checkDependencies(packageJsonFiles) {
-  const dependencies = {};
-  packageJsonFiles.forEach((file) => {
-    const pkg = JSON.parse(fs.readFileSync(file, "utf8"));
-    const deps = { ...pkg.dependencies, ...pkg.devDependencies };
-    Object.entries(deps).forEach(([dep, version]) => {
-      if (isPinnedVersion(version)) {
-        if (!dependencies[dep]) {
-          dependencies[dep] = {};
-        }
-        dependencies[dep][version] = [
-          ...(dependencies[dep][version] || []),
-          file,
-        ];
-      }
-    });
-  });
-
-  let inconsistenciesFound = false;
-  Object.entries(dependencies).forEach(([dep, versions]) => {
-    if (Object.keys(versions).length > 1) {
-      console.log(`Multiple pinned versions found for ${dep}:`);
-      Object.entries(versions).forEach(([version, files]) => {
-        console.log(`  ${version}:`);
-        files.forEach((file) => console.log(`    ${file}`));
-      });
-      console.log();
-      inconsistenciesFound = true;
-    }
-  });
-
-  if (!inconsistenciesFound) {
-    console.log(
-      "No version inconsistencies found in pinned dependencies across workspace packages."
-    );
-    process.exit(0);
-  } else {
+  } catch (error) {
+    console.error("Error running dependency check:", error);
     process.exit(1);
   }
 }
 
-// Get the directory from command line argument, or use current directory if not provided
-const rootDir = path.resolve(process.argv[2] || process.cwd());
-
-try {
-  const workspaces = getWorkspaces(rootDir);
-  const packageJsonFiles = findPackageJsonFiles(rootDir, workspaces);
-  checkDependencies(packageJsonFiles);
-} catch (error) {
-  console.error(`Error: ${error.message}`);
-  process.exit(1);
-}
+checkDependencies();

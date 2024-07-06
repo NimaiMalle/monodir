@@ -1,0 +1,18 @@
+{
+  "files.watcherExclude": {
+    "**/node_modules/**": true
+  },
+  "emeraldwalk.runonsave": {
+    "commands": [
+      {
+        "match": "package.json",
+        "isAsync": false,
+        "cmd": "yarn install",
+        "runIn": "terminal",
+        "options": {
+          "cwd": "${fileDirname}"
+        }
+      }
+    ]
+  }
+}

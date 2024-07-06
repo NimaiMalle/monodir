@@ -1,9 +1,13 @@
 {
   "name": "project1",
+  "license": "UNLICENSED",
   "private": true,
   "workspaces": [
     "app1",
     "app2",
     "common/*"
-  ]
+  ],
+  "resolutions": {
+    "moment": "2.29.2"
+  }
 }
